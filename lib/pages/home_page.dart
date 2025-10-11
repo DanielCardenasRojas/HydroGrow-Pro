@@ -13,7 +13,7 @@ class HomePage extends StatelessWidget {
         items: [
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.speedometer),
-            label: 'Panel',
+            label: 'Panel prueba',
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.star_lefthalf_fill),
