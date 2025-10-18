@@ -21,7 +21,7 @@ class HomePage extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.chat_bubble_text),
-            label: 'Asistente',
+            label: 'Asistentee',
           ),
         ],
       ),
