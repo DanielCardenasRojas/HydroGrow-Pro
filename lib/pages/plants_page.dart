@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class PlantsPage extends StatefulWidget {
   const PlantsPage({super.key});
@@ -7,158 +8,68 @@ class PlantsPage extends StatefulWidget {
 }
 
 class _PlantsPageState extends State<PlantsPage> {
-  final _pots = [
-    PotState(name: 'Maceta 1', moisture: 42, target: 55, auto: false),
-    PotState(name: 'Maceta 2', moisture: 55, target: 55, auto: true),
-  ];
+  late final WebViewController _webController;
+
+  // Script JavaScript para ocultar la barra azul de Node-RED Dashboard
+  final String _hideNavbarJS = r"""
+    function hideTop() {
+      // Node-RED Dashboard v1 (Angular)
+      var t1 = document.getElementById('nr-dashboard-toolbar');
+      if (t1) { t1.style.display='none'; t1.style.height='0'; t1.style.minHeight='0'; }
+      var t2 = document.querySelector('md-toolbar');
+      if (t2) { t2.style.display='none'; t2.style.height='0'; t2.style.minHeight='0'; }
+
+      // Node-RED Dashboard v2 (Vue / FlowFuse)
+      var t3 = document.querySelector('.nrdb-header, .dashboard-header, .v-app-bar');
+      if (t3) { t3.style.display='none'; t3.style.height='0'; t3.style.minHeight='0'; }
+
+      // Elimina márgenes/rellenos superiores
+      ['body','#ui-view','.nr-dashboard-container','main','#app'].forEach(sel=>{
+        var n = document.querySelector(sel);
+        if (n) { n.style.marginTop='0'; n.style.paddingTop='0'; }
+      });
+
+      // Ajusta el contenedor principal
+      var content = document.querySelector('.nr-dashboard-template, .v-main, .nrdb-content, .nrdb-page');
+      if (content) { content.style.paddingTop='0'; content.style.marginTop='0'; }
+    }
+    hideTop();
+    // Vuelve a ocultar si el dashboard se re-renderiza
+    new MutationObserver(hideTop).observe(document.documentElement, {childList:true, subtree:true});
+  """;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _webController = WebViewController()
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            _webController.runJavaScript(_hideNavbarJS);
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri.parse(
+          // panel de plantas (monitoreo)
+          'https://hydrogrow.flowfuse.cloud/ui/#!/1?kiosk=1',
+        ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text('Plantas')),
       child: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: _pots.length,
-          itemBuilder: (c, i) => _PlantSection(
-            state: _pots[i],
-            onChanged: (s) => setState(() => _pots[i] = s),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class PotState {
-  final String name;
-  final double moisture;
-  final double target;
-  final bool auto;
-  final DateTime? lastWatered;
-  PotState({
-    required this.name,
-    required this.moisture,
-    required this.target,
-    required this.auto,
-    this.lastWatered,
-  });
-  PotState copyWith({
-    String? name,
-    double? moisture,
-    double? target,
-    bool? auto,
-    DateTime? lastWatered,
-  }) => PotState(
-    name: name ?? this.name,
-    moisture: moisture ?? this.moisture,
-    target: target ?? this.target,
-    auto: auto ?? this.auto,
-    lastWatered: lastWatered ?? this.lastWatered,
-  );
-}
-
-class _PlantSection extends StatelessWidget {
-  final PotState state;
-  final ValueChanged<PotState> onChanged;
-  const _PlantSection({required this.state, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return CupertinoFormSection.insetGrouped(
-      header: Text(state.name),
-      children: [
-        _RowText('Humedad actual', '${state.moisture.toStringAsFixed(0)} %'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: _CupertinoLinear(percent: (state.moisture / 100).clamp(0, 1)),
-        ),
-        CupertinoFormRow(
-          prefix: const Text('Auto-riego'),
-          child: CupertinoSwitch(
-            value: state.auto,
-            onChanged: (v) => onChanged(state.copyWith(auto: v)),
-          ),
-        ),
-        CupertinoFormRow(
-          prefix: const Text('Objetivo humedad'),
-          child: SizedBox(
-            width: 180,
-            child: CupertinoSlider(
-              value: state.target,
-              min: 30,
-              max: 80,
-              divisions: 10,
-              onChanged: (v) => onChanged(state.copyWith(target: v)),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  state.lastWatered == null
-                      ? 'Último riego —'
-                      : 'Último riego: ${state.lastWatered}',
-                  style: const TextStyle(color: CupertinoColors.systemGrey),
-                ),
-              ),
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                color: CupertinoColors.activeGreen,
-                onPressed: () =>
-                    onChanged(state.copyWith(lastWatered: DateTime.now())),
-                child: const Text('Regar ahora'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RowText extends StatelessWidget {
-  final String left, right;
-  const _RowText(this.left, this.right);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Row(
-        children: [
-          Expanded(child: Text(left)),
-          Text(
-            right,
-            style: const TextStyle(color: CupertinoColors.systemGrey),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CupertinoLinear extends StatelessWidget {
-  final double percent;
-  const _CupertinoLinear({required this.percent});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 8,
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey4,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: percent,
-          child: Container(color: CupertinoColors.activeGreen),
+          child: WebViewWidget(controller: _webController),
         ),
       ),
     );
