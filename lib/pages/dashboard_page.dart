@@ -15,7 +15,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
 
-    // Controlador del panel de gráficas
+    // Controlador del panel de gráficass
     _chartsController = WebViewController()
       ..setBackgroundColor(const Color(0x00000000))
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
