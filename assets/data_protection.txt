@@ -1,0 +1,67 @@
+🌱 HYDROGROWPRO
+------------------------------------------------------------
+
+🛡️ PROTECCIÓN DE DATOS PERSONALES
+
+Ubicación: San Juan del Río, Querétaro, México
+Versión: 1.0
+Fecha de actualización: 20 de octubre de 2025
+
+------------------------------------------------------------
+🔒 COMPROMISO DE PROTECCIÓN
+
+HydroGrowPro establece medidas técnicas, organizativas y legales
+para proteger los datos personales de sus usuarios, garantizando su
+confidencialidad, integridad y disponibilidad.
+
+------------------------------------------------------------
+📋 DATOS PERSONALES RECOPILADOS
+
+- Nombre y correo electrónico para registro y autenticación dentro de la aplicación.
+- Ubicación aproximada del invernadero.
+- Datos del dispositivo IoT asociado al kit.
+
+No se recopilan datos financieros ni biométricos.
+
+------------------------------------------------------------
+⚖️ PRINCIPIOS DE PROTECCIÓN DE DATOS
+
+HydroGrowPro aplica los siguientes principios:
+- Licitud y transparencia
+- Minimización de datos
+- Exactitud y actualización
+- Limitación de finalidad
+- Conservación responsable
+
+Los datos se eliminan o anonimizan cuando dejan de ser necesarios
+para los fines originales.
+
+------------------------------------------------------------
+🧠 MEDIDAS DE SEGURIDAD IMPLEMENTADAS
+
+- Cifrado TLS 1.3 en tránsito y AES-256 en reposo.
+- Autenticación segura con OAuth 2.0 y contraseñas cifradas con bcrypt.
+- Tokens temporales y control de acceso restringido.
+- Validación en el servidor y respuestas API limitadas.
+- Eliminación automática de datos tras 90 días de inactividad.
+- Capacitación continua en seguridad y revisiones periódicas de código.
+
+------------------------------------------------------------
+👤 DERECHOS DEL TITULAR
+
+Los usuarios pueden ejercer sus derechos de:
+- Acceso
+- Rectificación
+- Cancelación
+- Oposición (ARCO)
+
+Para ejercerlos, puede contactarnos en:
+hydrogrow90@gmail.com
+------------------------------------------------------------
+RESPONSABLE
+
+HydroGrowPro — Departamento de Seguridad de la Información
+San Juan del Río, Querétaro, México
+
+------------------------------------------------------------
+© 2025 HydroGrowPro – Todos los derechos reservados. 🌿

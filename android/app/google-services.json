@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1019720983461",
+    "project_id": "hydrogrow-eac27",
+    "storage_bucket": "hydrogrow-eac27.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1019720983461:android:bafd9dd088fce67bd37e4c",
+        "android_client_info": {
+          "package_name": "com.example.hydrogrow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQHuUMYhiboOqXdw0k4IUefGkq6BJTngE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

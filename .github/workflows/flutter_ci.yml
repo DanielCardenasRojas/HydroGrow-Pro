@@ -1,0 +1,86 @@
+name: Hydro CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancela ejecuciones duplicadas en el mismo ref
+concurrency:
+  group: hydro-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_and_test:
+    name: Build & Test (Ubuntu)
+    runs-on: ubuntu-latest
+
+    env:
+      # Útil si usas variables en tests/build
+      CI: true
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+
+      # Usa Java 17 (requerido por tu setup Gradle/AGP)
+      - name: ☕ Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: 💙 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          # Si quieres fijar versión para que coincida con tu local, descomenta la línea siguiente:
+          # flutter-version: '3.22.x'
+
+      # (Opcional) Muestra diagnóstico rápido
+      - name: 🩺 Flutter doctor
+        run: flutter doctor -v
+
+      # Cache de dependencias de Dart/Flutter
+      - name: 🧠 Cache Pub
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ${{ github.workspace }}/.dart_tool
+          key: pub-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}-
+
+      - name: ⚙️ flutter pub get
+        run: flutter pub get
+
+      - name: 🔎 Analyze
+        run: flutter analyze
+
+      - name: 🧪 Tests (con cobertura)
+        run: flutter test --coverage
+
+      # Acepta licencias de Android para el build
+      - name: ✅ Accept Android licenses
+        run: yes | flutter doctor --android-licenses
+
+      # Build rápido para verificar compilación Android (debug)
+      - name: 🛠 Build APK (debug)
+        run: flutter build apk --debug --no-tree-shake-icons
+
+      # Guarda artefactos útiles del job
+      - name: 📤 Subir APK debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: 📤 Subir cobertura (lcov)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: ignore

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -7,124 +8,234 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // demo (luego vendrá de tu API)
-  double temp = 24.8;
-  double soil1 = 42;
-  double soil2 = 55;
-  bool lightsOn = true;
-  bool fan1On = false;
-  bool fan2On = false;
+  late final WebViewController _chartsController;
+  late final WebViewController _switchesController;
+
+  /// Color de acento para tu marca (HEX con #)
+  static const String _accentHex = '#34C759'; // verde iOS / cámbialo si quieres
+
+  @override
+  void initState() {
+    super.initState();
+
+    _chartsController = WebViewController()
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) async {
+            await _chartsController.runJavaScript(_hideBarsJS);
+            await _applyTheme(_chartsController);
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri.parse('https://hydrogrow.flowfuse.cloud/ui/#!/0?kiosk=1'),
+      );
+
+    _switchesController = WebViewController()
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) async {
+            await _switchesController.runJavaScript(_hideBarsJS);
+            await _applyTheme(_switchesController);
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri.parse('https://hydrogrow.flowfuse.cloud/ui/#!/2?kiosk=1'),
+      );
+  }
+
+  /// Oculta toolbars/headers de Node-RED Dashboard (v1 y v2)
+  final String _hideBarsJS = r"""
+    (function hideTop() {
+      var t1 = document.getElementById('nr-dashboard-toolbar');
+      if (t1) { t1.style.display='none'; t1.style.height='0'; t1.style.minHeight='0'; }
+      var t2 = document.querySelector('md-toolbar');
+      if (t2) { t2.style.display='none'; t2.style.height='0'; t2.style.minHeight='0'; }
+
+      var t3 = document.querySelector('.nrdb-header, .dashboard-header, .v-app-bar');
+      if (t3) { t3.style.display='none'; t3.style.height='0'; t3.style.minHeight='0'; }
+
+      ['body','#ui-view','.nr-dashboard-container','main','#app'].forEach(sel=>{
+        var n = document.querySelector(sel);
+        if (n) { n.style.marginTop='0'; n.style.paddingTop='0'; }
+      });
+
+      var content = document.querySelector('.nr-dashboard-template, .v-main, .nrdb-content, .nrdb-page');
+      if (content) { content.style.paddingTop='0'; content.style.marginTop='0'; }
+    })();
+    new MutationObserver(()=>{ try { hideTop(); } catch(e){} })
+      .observe(document.documentElement, {childList:true, subtree:true});
+  """;
+
+  /// Genera CSS para claro/oscuro con tu color de acento
+  String _cssFor({required bool dark}) {
+    final accent = _accentHex;
+    // Colores base
+    final bg = dark ? '#0B0B0C' : '#F2F2F7';
+    final card = dark ? '#1C1C1E' : '#FFFFFF';
+    final text = dark ? '#FFFFFF' : '#111111';
+    final sub = dark ? '#9A9AA1' : '#6B7280';
+    final border = dark ? '#2C2C2E' : '#E5E7EB';
+
+    // CSS dirigido a clases comunes de Node-RED Dashboard v1/v2
+    return """
+      :root {
+        --hydro-accent: $accent;
+        --hydro-bg: $bg;
+        --hydro-card: $card;
+        --hydro-text: $text;
+        --hydro-sub: $sub;
+        --hydro-border: $border;
+        --hydro-radius: 16px;
+        --hydro-shadow: 0 6px 20px rgba(0,0,0,${dark ? '0.35' : '0.08'});
+      }
+
+      html, body, #app, .nr-dashboard-container, .nrdb-content, .v-application {
+        background: var(--hydro-bg) !important;
+        color: var(--hydro-text) !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+                     'Helvetica Neue', Helvetica, Arial, 'Segoe UI', sans-serif !important;
+      }
+
+      /* Tarjetas / paneles */
+      .nr-dashboard-template, .nrdb-card, .v-card, .card-panel, md-card, .nrdb-widget, .v-sheet {
+        background: var(--hydro-card) !important;
+        color: var(--hydro-text) !important;
+        border-radius: var(--hydro-radius) !important;
+        box-shadow: var(--hydro-shadow) !important;
+        border: 1px solid var(--hydro-border) !important;
+      }
+
+      /* Títulos y subtítulos */
+      .nr-dashboard-template h1, .nr-dashboard-template h2, .nr-dashboard-template h3,
+      .v-card-title, .v-toolbar-title, .nrdb-card-title, .md-title {
+        color: var(--hydro-text) !important;
+        font-weight: 700 !important;
+        letter-spacing: .2px;
+      }
+      .nrdb-subtitle, .v-card-subtitle, .md-subhead, .caption, .helper-text {
+        color: var(--hydro-sub) !important;
+      }
+
+      /* Botones / toggles / sliders con color de acento */
+      .md-button, .v-btn, .v-switch--inset .v-input--selection-controls__ripple,
+      .v-slider .v-slider-track__fill, .v-slider .v-slider-thumb,
+      .btn, .button, .nrdb-button {
+        background: var(--hydro-accent) !important;
+        color: #fff !important;
+        border-radius: 12px !important;
+      }
+      .v-switch .v-input--selection-controls__ripple { background: var(--hydro-accent) !important; }
+      .v-switch .v-selection-control__input:checked + .v-selection-control__wrapper .v-switch__track {
+        background: var(--hydro-accent) !important;
+      }
+
+      /* Inputs */
+      input, select, textarea, .v-text-field, .nrdb-input, .md-input {
+        background: var(--hydro-card) !important;
+        color: var(--hydro-text) !important;
+        border-radius: 12px !important;
+        border: 1px solid var(--hydro-border) !important;
+      }
+
+      /* Tablas */
+      table, .v-table, .md-table-content {
+        background: var(--hydro-card) !important;
+        color: var(--hydro-text) !important;
+        border-radius: 12px !important;
+      }
+      th, td { border-color: var(--hydro-border) !important; }
+
+      /* Espaciado */
+      .nrdb-card, .v-card, .v-sheet, .nr-dashboard-template, .card-panel {
+        margin: 8px !important;
+        padding: 12px !important;
+      }
+
+      /* Quita bordes y headers sobrantes */
+      .nrdb-header, .dashboard-header, .v-app-bar, md-toolbar, #nr-dashboard-toolbar {
+        display: none !important;
+      }
+    """;
+  }
+
+  /// Inyecta el CSS generado en la página
+  Future<void> _applyTheme(WebViewController c) async {
+    final isDark =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+        Brightness.dark;
+
+    final css = _cssFor(
+      dark: isDark,
+    ).replaceAll('\n', ' ').replaceAll("'", r"\'");
+
+    final js =
+        """
+      (function(){
+        try {
+          var old = document.getElementById('hydro-style');
+          if (old) old.remove();
+          var style = document.createElement('style');
+          style.id = 'hydro-style';
+          style.type = 'text/css';
+          style.appendChild(document.createTextNode('$css'));
+          document.head.appendChild(style);
+        } catch(e) {}
+      })();
+    """;
+    await c.runJavaScript(js);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final avgSoil = (soil1 + soil2) / 2;
-    final fansOn = (fan1On ? 1 : 0) + (fan2On ? 1 : 0);
+    final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: const Text('Panel'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () => setState(() {
-            temp += 0.1;
-            soil1 = (soil1 - 0.3).clamp(0, 100);
-            soil2 = (soil2 - 0.3).clamp(0, 100);
-          }),
-          child: const Icon(CupertinoIcons.refresh),
+        middle: Text(
+          'Dashboard',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isDark ? CupertinoColors.white : CupertinoColors.black,
+          ),
         ),
+        backgroundColor: CupertinoColors.systemGroupedBackground,
+        border: null,
       ),
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // KPIs (cards horizontales)
+            // === WebView superior: gráficas ===
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 120,
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                height: 320,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
                   ),
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _Kpi(
-                      title: 'Temp',
-                      value: '${temp.toStringAsFixed(1)} °C',
-                      icon: CupertinoIcons.thermometer,
-                    ),
-                    _Kpi(
-                      title: 'Humedad prom.',
-                      value: '${avgSoil.toStringAsFixed(0)} %',
-                      icon: CupertinoIcons.drop,
-                    ),
-                    _Kpi(
-                      title: 'Luz',
-                      value: lightsOn ? 'Encendida' : 'Apagada',
-                      icon: CupertinoIcons.lightbulb,
-                    ),
-                    _Kpi(
-                      title: 'Ventilación',
-                      value: '$fansOn / 2',
-                      icon: CupertinoIcons.wind,
-                    ),
-                  ],
+                  child: WebViewWidget(controller: _chartsController),
                 ),
               ),
             ),
 
-            // Macetas (inset grouped)
+            // === WebView inferior: switches ===
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                child: const Text(
-                  'Macetas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              child: SizedBox(
+                height: 280,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                  child: WebViewWidget(controller: _switchesController),
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  _PotTile(name: 'Maceta 1', percent: soil1),
-                  _PotTile(name: 'Maceta 2', percent: soil2),
-                ],
-              ),
-            ),
 
-            // Controles globales
-            SliverToBoxAdapter(
-              child: CupertinoFormSection.insetGrouped(
-                header: const Text('Controles'),
-                children: [
-                  CupertinoFormRow(
-                    prefix: const Text('Luz de crecimiento'),
-                    child: CupertinoSwitch(
-                      value: lightsOn,
-                      onChanged: (v) => setState(() => lightsOn = v),
-                    ),
-                  ),
-                  CupertinoFormRow(
-                    prefix: const Text('Ventilador 1'),
-                    child: CupertinoSwitch(
-                      value: fan1On,
-                      onChanged: (v) => setState(() => fan1On = v),
-                    ),
-                  ),
-                  CupertinoFormRow(
-                    prefix: const Text('Ventilador 2'),
-                    child: CupertinoSwitch(
-                      value: fan2On,
-                      onChanged: (v) => setState(() => fan2On = v),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Placeholder de gráficas
+            // === Tarjeta placeholder (opcional) ===
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -146,113 +257,22 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-class _Kpi extends StatelessWidget {
-  final String title, value;
-  final IconData icon;
-  const _Kpi({required this.title, required this.value, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      width: 180,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 22, color: CupertinoColors.activeGreen),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(color: CupertinoColors.systemGrey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PotTile extends StatelessWidget {
-  final String name;
-  final double percent;
-  const _PotTile({required this.name, required this.percent});
-
-  @override
-  Widget build(BuildContext context) {
-    return CupertinoFormSection.insetGrouped(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.star_lefthalf_fill,
-                size: 22,
-                color: CupertinoColors.systemGrey2,
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text(name, style: const TextStyle(fontSize: 16))),
-              Text('${percent.toStringAsFixed(0)} %'),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: _CupertinoLinear(percent: (percent / 100).clamp(0, 1)),
-        ),
-      ],
-    );
-  }
-}
-
-/// Tarjeta con esquinas iOS (secondarySystemGroupedBackground)
+/// Tarjeta con esquinas iOS
 class _Card extends StatelessWidget {
   final double? width, height;
   final Widget child;
-  const _Card({this.width, this.height, required this.child});
+  const _Card({this.width, this.height, required this.child, super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: width,
       height: height,
-      margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         color: CupertinoColors.secondarySystemGroupedBackground,
         borderRadius: BorderRadius.circular(16),
       ),
       child: child,
-    );
-  }
-}
-
-/// Barra de progreso estilo iOS simple
-class _CupertinoLinear extends StatelessWidget {
-  final double percent; // 0..1
-  const _CupertinoLinear({required this.percent});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 8,
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemGrey4,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: percent,
-          child: Container(color: CupertinoColors.activeGreen),
-        ),
-      ),
     );
   }
 }

@@ -1,0 +1,32 @@
+HydroGrowPro
+
+────────────────────
+Política de Privacidad
+────────────────────
+
+En HydroGrowPro valoramos la privacidad y la protección de los datos personales.
+Esta política explica cómo se recopila, usa y protege la información de los usuarios.
+
+Uso de la información:
+La información se utiliza para administrar los dispositivos IoT, automatizar el riego,
+mostrar métricas ambientales y mejorar la experiencia del usuario.
+
+Protección de datos:
+Los datos se transmiten mediante conexiones cifradas TLS 1.3 y se almacenan de forma segura
+con cifrado AES-256. Además, se siguen las recomendaciones de OWASP para prevenir
+la exposición de datos confidenciales.
+
+Compartición y derechos:
+HydroGrowPro no comparte información con terceros, salvo por obligación legal o
+con autorización expresa del usuario. Los usuarios pueden solicitar acceso, corrección
+o eliminación de sus datos a:
+📧 hydrogrow90@gmail.com
+
+Cambios en la política:
+Cualquier modificación será notificada dentro de la aplicación.
+
+HydroGrowPro reafirma su compromiso con la transparencia, la innovación
+y la seguridad digital. 🌿
+
+──────────────────────
+HydroGrowPro © 2025 – Todos los derechos reservados

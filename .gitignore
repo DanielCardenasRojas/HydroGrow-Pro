@@ -1,9 +1,13 @@
-# Miscellaneous
+# =========================
+#            General
+# =========================
+# Misceláneos / sistema
 *.class
 *.log
 *.pyc
 *.swp
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
@@ -12,34 +16,121 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# =========================
+#            IDEs
+# =========================
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code (normalmente se versiona .vscode; déjalo comentado si lo quieres subir)
 #.vscode/
 
-# Flutter/Dart/Pub related
+# =========================
+#     Flutter / Dart / Pub
+# =========================
 **/doc/api/
-**/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+coverage/
+# Salidas de compilación (todas las plataformas)
+build/
+**/build/
 
-# Symbolication related
+# iOS build ID cache
+**/ios/Flutter/.last_build_id
+
+# =========================
+#      Android específico
+# =========================
+# Variantes de build locales
+android/app/debug
+android/app/profile
+android/app/release
+
+# Gradle (opcional; la carpeta .gradle en el módulo raíz suele generarse)
+.gradle/
+**/local.properties
+
+# Keystores y propiedades de firma (SENSIBLES)
+*.keystore
+*.jks
+android/key.properties
+**/keystore.properties
+
+# =========================
+#        iOS / macOS
+# =========================
+# CocoaPods (recomendado ignorar Pods en Flutter)
+ios/Pods/
+macos/Pods/
+
+# Artefactos efímeros de Flutter
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+macos/Flutter/ephemeral/
+
+# Xcode user data
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/project.xcworkspace/xcuserdata/
+**/*.xcuserdatad/
+**/*.xcuserstate
+
+# =========================
+#         Web / Linux / Windows
+# =========================
+# (build/ ya cubre la mayoría)
+# Archivos cacheados por plataformas de escritorio
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# =========================
+#     Simbolicación y ofuscación
+# =========================
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# =========================
+#         CI / Fastlane
+# =========================
+fastlane/.env*
+fastlane/Appfile
+fastlane/Matchfile
+fastlane/README.md
+
+# =========================
+#     Variables / Secretos
+# =========================
+# Entornos locales
+.env
+.env.*
+
+# Certs y llaves
+*.p12
+*.pem
+*.der
+*.key
+*.crt
+
+# Archivos de secretos en código (si existieran)
+lib/config/secrets.dart
+
+# Cuentas de servicio (NO deben estar en apps cliente)
+*serviceAccount*.json
+*firebase-adminsdk*.json
+
+# =========================
+#        Firebase (nota)
+# =========================
+# Por lo general, en apps cliente estos SÍ se versionan:
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist
+# Si tu equipo prefiere NO subirlos, descomenta estas líneas:
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist
