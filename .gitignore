@@ -1,7 +1,6 @@
 # =========================
 #            General
 # =========================
-# Misceláneos / sistema
 *.class
 *.log
 *.pyc
@@ -25,7 +24,7 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# VS Code (normalmente se versiona .vscode; déjalo comentado si lo quieres subir)
+# VS Code (si no quieres versionar la config local, descomenta)
 #.vscode/
 
 # =========================
@@ -33,11 +32,12 @@ migrate_working_dir/
 # =========================
 **/doc/api/
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 coverage/
-# Salidas de compilación (todas las plataformas)
 build/
 **/build/
 
@@ -47,25 +47,26 @@ build/
 # =========================
 #      Android específico
 # =========================
+android/.gradle/
+.gradle/
+**/local.properties
+
 # Variantes de build locales
 android/app/debug
 android/app/profile
 android/app/release
 
-# Gradle (opcional; la carpeta .gradle en el módulo raíz suele generarse)
-.gradle/
-**/local.properties
-
 # Keystores y propiedades de firma (SENSIBLES)
 *.keystore
 *.jks
+*.p12
 android/key.properties
 **/keystore.properties
 
 # =========================
 #        iOS / macOS
 # =========================
-# CocoaPods (recomendado ignorar Pods en Flutter)
+# CocoaPods
 ios/Pods/
 macos/Pods/
 
@@ -83,15 +84,13 @@ macos/Flutter/ephemeral/
 **/*.xcuserstate
 
 # =========================
-#         Web / Linux / Windows
+#     Web / Linux / Windows
 # =========================
-# (build/ ya cubre la mayoría)
-# Archivos cacheados por plataformas de escritorio
 linux/flutter/ephemeral/
 windows/flutter/ephemeral/
 
 # =========================
-#     Simbolicación y ofuscación
+#     Simbolicación / mapas
 # =========================
 app.*.symbols
 app.*.map.json
@@ -107,12 +106,12 @@ fastlane/README.md
 # =========================
 #     Variables / Secretos
 # =========================
-# Entornos locales
+# Entornos
 .env
 .env.*
+.env.local
 
 # Certs y llaves
-*.p12
 *.pem
 *.der
 *.key
@@ -121,16 +120,13 @@ fastlane/README.md
 # Archivos de secretos en código (si existieran)
 lib/config/secrets.dart
 
-# Cuentas de servicio (NO deben estar en apps cliente)
+# Cuentas de servicio (NO en cliente)
 *serviceAccount*.json
 *firebase-adminsdk*.json
 
 # =========================
-#        Firebase (nota)
+#          Firebase
 # =========================
-# Por lo general, en apps cliente estos SÍ se versionan:
-# android/app/google-services.json
-# ios/Runner/GoogleService-Info.plist
-# Si tu equipo prefiere NO subirlos, descomenta estas líneas:
-# android/app/google-services.json
-# ios/Runner/GoogleService-Info.plist
+# NO subir configs de cliente (política del equipo)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
