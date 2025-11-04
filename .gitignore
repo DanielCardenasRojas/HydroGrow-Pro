@@ -24,7 +24,7 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# VS Code (si no quieres versionar la config local, descomenta)
+# VS Code (descomenta si no quieres subir config local)
 #.vscode/
 
 # =========================
@@ -55,13 +55,6 @@ android/.gradle/
 android/app/debug
 android/app/profile
 android/app/release
-
-# Keystores y propiedades de firma (SENSIBLES)
-*.keystore
-*.jks
-*.p12
-android/key.properties
-**/keystore.properties
 
 # =========================
 #        iOS / macOS
@@ -117,16 +110,24 @@ fastlane/README.md
 *.key
 *.crt
 
+# Keystores y propiedades de firma (SENSIBLES)
+*.keystore
+*.jks
+*.p12
+android/key.properties
+**/keystore.properties
+
 # Archivos de secretos en código (si existieran)
 lib/config/secrets.dart
 
-# Cuentas de servicio (NO en cliente)
+# Cuentas de servicio (NO en apps cliente)
 *serviceAccount*.json
 *firebase-adminsdk*.json
 
 # =========================
 #          Firebase
 # =========================
-# NO subir configs de cliente (política del equipo)
+# No subir configs de cliente
 android/app/google-services.json
+android/app/google_services.json
 ios/Runner/GoogleService-Info.plist
