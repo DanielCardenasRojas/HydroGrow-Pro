@@ -5,6 +5,14 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -26,9 +34,9 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: "3.35.7"
+          flutter-version: "3.35.7"   # Ajusta si usas otra
 
-      # (Opcional) Cachés para acelerar
+      # --- CACHÉS (acelera builds posteriores) ---
       - name: Cache Flutter pub
         uses: actions/cache@v4
         with:
@@ -55,9 +63,70 @@ jobs:
 
       # --- ANÁLISIS ESTÁTICO ---
       - name: Analizar código (flutter analyze)
-        run: flutter analyze > flutter_analyze.txt || true
+        run: |
+          flutter analyze > flutter_analyze.txt || true
+          echo "---- Archivo generado ----"
+          ls -lah flutter_analyze.txt || true
+          echo "---- Líneas ----"
+          wc -l flutter_analyze.txt || true
 
       - name: Subir reporte de análisis
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: analyze-report
+          path: flutter_analyze.txt
+          if-no-files-found: warn
+
+      # --- PRUEBAS + COBERTURA ---
+      - name: Ejecutar pruebas con cobertura
+        run: |
+          flutter test --coverage | tee test_output.txt
+          echo "---- Comprobando cobertura ----"
+          ls -lah coverage || true
+          ls -lah coverage/lcov.info || true
+
+      - name: Subir logs de pruebas y cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage
+          path: |
+            test_output.txt
+            coverage/lcov.info
+          if-no-files-found: error
+
+      # --- BUILD ANDROID (DEBUG) ---
+      - name: Compilar APK de Android (debug)
+        run: flutter build apk --debug
+
+      - name: Subir APK (debug) como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrogrow-pro-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+
+      # --- (OPCIONAL) BUILD RELEASE FIRMADO ---
+      # Para compilar release necesitas configurar firma y secrets.
+      # - name: Compilar APK de Android (release)
+      #   run: flutter build apk --release
+      # - name: Subir APK (release) como artefacto
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: hydrogrow-pro-apk-release
+      #     path: build/app/outputs/flutter-apk/app-release.apk
+      #     if-no-files-found: error
+
+      # --- (OPCIONAL) NOTIFICACIÓN SLACK EN FALLO ---
+      # Añade el secret SLACK_WEBHOOK_URL en Settings > Secrets > Actions
+      - name: Notificar a Slack si falla
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": ":x: CI falló en *${{ github.repository }}* (`${{ github.ref_name }}`)\n• *Workflow:* ${{ github.workflow }}\n• *Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
