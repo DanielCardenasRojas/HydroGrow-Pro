@@ -1,5 +1,47 @@
-- name: Configurar Entorno Flutter
-    uses: subosito/flutter-action@v2
-    with:
-      flutter-version: '3.x.x' # <-- ESTO DEBE CAMBIARSE
-      channel: 'stable'
+# Archivo: .github/workflows/main_ci.yml
+
+name: Flutter CI Pipeline - Android Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+      # FASE DE CONFIGURACIÓN Y CHECKOUT
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        
+      # FASE DE COMPILACIÓN: Preparar Flutter
+      - name: Configurar Entorno Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0' 
+          channel: 'stable'
+          
+      # FASE DE COMPILACIÓN: Instalar Dependencias (flutter pub get)
+      - name: Instalar dependencias (flutter pub get)
+        run: flutter pub get
+        
+      # FASE DE PRUEBAS: Ejecutar Pruebas y Análisis
+      - name: Ejecutar Pruebas y Reportar Resultados (flutter test)
+        run: flutter test
+        
+      - name: Analizar código para calidad y estilo (flutter analyze)
+        run: flutter analyze
+        
+      # FASE DE ARTEFACTO: Compilación (flutter build apk)
+      - name: Compilar APK de Android
+        run: flutter build apk --release
+        
+      - name: Subir APK como Artefacto del Pipeline
+        uses: actions/upload-artifact@v4
+        with:
+          name: hydrogrow-pro-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
