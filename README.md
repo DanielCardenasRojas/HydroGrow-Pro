@@ -146,4 +146,5 @@ para la materia **Desarrollo Móvil Integral**.
 © 2025 — *Equipo HydroGrow Pro*  
 Todos los derechos reservados.
 
----
+---------
+
