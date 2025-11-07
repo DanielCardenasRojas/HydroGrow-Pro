@@ -1,49 +1,5 @@
-# Archivo: .github/workflows/main_ci.yml
-
-name: Flutter CI Pipeline - Android Build
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-
-      # PASO 1: Checkout del Código
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-
-      # PASO 2: Preparar Flutter
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.x.x' # Asegúrate de usar la versión correcta de tu equipo
-          channel: 'stable'
-
-      # PASO 3: Instalar Dependencias
-      - name: Instalar dependencias de Flutter
-        run: flutter pub get
-
-      # PASO 4: Ejecutar Pruebas
-      - name: Ejecutar Pruebas
-        run: flutter test
-
-      # PASO 5: Análisis de Código Estático
-      - name: Analizar código con Flutter Analyze
-        run: flutter analyze
-
-      # PASO 6: Compilar la Aplicación
-      - name: Compilar APK de Android
-        run: flutter build apk --release
-
-      # PASO 7: Publicar Artefacto
-      - name: Subir artefacto (APK)
-        uses: actions/upload-artifact@v4
-        with:
-          name: hydrogrow-pro-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+- name: Configurar Entorno Flutter
+    uses: subosito/flutter-action@v2
+    with:
+      flutter-version: '3.x.x' # <-- ESTO DEBE CAMBIARSE
+      channel: 'stable'
