@@ -32,7 +32,6 @@ dependencies:
     sdk: flutter
   webview_flutter: ^4.8.0
   google_generative_ai: ^0.4.7
-  flutter_dotenv: ^6.0.0
   
 
   # The following adds the Cupertino Icons font to your application.
@@ -49,6 +48,12 @@ dependencies:
   http: ^1.2.2
   image_picker: ^1.1.2
   url_launcher: ^6.2.5
+  flutter_tts: ^4.2.3
+  flutter_dotenv: ^6.0.0
+  speech_to_text: ^7.3.0
+  dio: ^5.0.0
+  firebase_messaging: ^15.2.10
+  mqtt_client: ^10.11.1
 
 
 

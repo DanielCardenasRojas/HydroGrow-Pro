@@ -41,7 +41,6 @@ class ThemeController {
       case AppThemeMode.dark:
         return Brightness.dark;
       case AppThemeMode.system:
-      default:
         return MediaQuery.maybeOf(context)?.platformBrightness ??
             Brightness.light;
     }

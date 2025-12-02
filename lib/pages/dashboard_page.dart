@@ -1,195 +1,135 @@
+// lib/pages/dashboard_page.dart
+
+import 'dart:ui'; // 👈 para BackdropFilter (efecto glass)
 import 'package:flutter/cupertino.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+import '../services/mqtt_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  late final WebViewController _chartsController;
-  late final WebViewController _switchesController;
+  // MQTT
+  final _mqtt = MqttService.I;
 
-  /// Color de acento para tu marca (HEX con #)
-  static const String _accentHex = '#34C759'; // verde iOS / cámbialo si quieres
+  bool _vent1 = false;
+  bool _vent2 = false;
+  bool _tiraLed = false;
+
+  // Reconocimiento de voz
+  late final stt.SpeechToText _speech;
+  bool _speechAvailable = false;
+  bool _isListening = false;
 
   @override
   void initState() {
     super.initState();
 
-    _chartsController = WebViewController()
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) async {
-            await _chartsController.runJavaScript(_hideBarsJS);
-            await _applyTheme(_chartsController);
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri.parse('https://hydrogrow.flowfuse.cloud/ui/#!/0?kiosk=1'),
-      );
+    // Conecta a HiveMQ
+    _mqtt.connect();
 
-    _switchesController = WebViewController()
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) async {
-            await _switchesController.runJavaScript(_hideBarsJS);
-            await _applyTheme(_switchesController);
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri.parse('https://hydrogrow.flowfuse.cloud/ui/#!/2?kiosk=1'),
-      );
+    // Inicializar STT
+    _speech = stt.SpeechToText();
+    _initSpeech();
   }
 
-  /// Oculta toolbars/headers de Node-RED Dashboard (v1 y v2)
-  final String _hideBarsJS = r"""
-    (function hideTop() {
-      var t1 = document.getElementById('nr-dashboard-toolbar');
-      if (t1) { t1.style.display='none'; t1.style.height='0'; t1.style.minHeight='0'; }
-      var t2 = document.querySelector('md-toolbar');
-      if (t2) { t2.style.display='none'; t2.style.height='0'; t2.style.minHeight='0'; }
+  // ================== VOZ ==================
 
-      var t3 = document.querySelector('.nrdb-header, .dashboard-header, .v-app-bar');
-      if (t3) { t3.style.display='none'; t3.style.height='0'; t3.style.minHeight='0'; }
-
-      ['body','#ui-view','.nr-dashboard-container','main','#app'].forEach(sel=>{
-        var n = document.querySelector(sel);
-        if (n) { n.style.marginTop='0'; n.style.paddingTop='0'; }
-      });
-
-      var content = document.querySelector('.nr-dashboard-template, .v-main, .nrdb-content, .nrdb-page');
-      if (content) { content.style.paddingTop='0'; content.style.marginTop='0'; }
-    })();
-    new MutationObserver(()=>{ try { hideTop(); } catch(e){} })
-      .observe(document.documentElement, {childList:true, subtree:true});
-  """;
-
-  /// Genera CSS para claro/oscuro con tu color de acento
-  String _cssFor({required bool dark}) {
-    final accent = _accentHex;
-    // Colores base
-    final bg = dark ? '#0B0B0C' : '#F2F2F7';
-    final card = dark ? '#1C1C1E' : '#FFFFFF';
-    final text = dark ? '#FFFFFF' : '#111111';
-    final sub = dark ? '#9A9AA1' : '#6B7280';
-    final border = dark ? '#2C2C2E' : '#E5E7EB';
-
-    // CSS dirigido a clases comunes de Node-RED Dashboard v1/v2
-    return """
-      :root {
-        --hydro-accent: $accent;
-        --hydro-bg: $bg;
-        --hydro-card: $card;
-        --hydro-text: $text;
-        --hydro-sub: $sub;
-        --hydro-border: $border;
-        --hydro-radius: 16px;
-        --hydro-shadow: 0 6px 20px rgba(0,0,0,${dark ? '0.35' : '0.08'});
-      }
-
-      html, body, #app, .nr-dashboard-container, .nrdb-content, .v-application {
-        background: var(--hydro-bg) !important;
-        color: var(--hydro-text) !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
-                     'Helvetica Neue', Helvetica, Arial, 'Segoe UI', sans-serif !important;
-      }
-
-      /* Tarjetas / paneles */
-      .nr-dashboard-template, .nrdb-card, .v-card, .card-panel, md-card, .nrdb-widget, .v-sheet {
-        background: var(--hydro-card) !important;
-        color: var(--hydro-text) !important;
-        border-radius: var(--hydro-radius) !important;
-        box-shadow: var(--hydro-shadow) !important;
-        border: 1px solid var(--hydro-border) !important;
-      }
-
-      /* Títulos y subtítulos */
-      .nr-dashboard-template h1, .nr-dashboard-template h2, .nr-dashboard-template h3,
-      .v-card-title, .v-toolbar-title, .nrdb-card-title, .md-title {
-        color: var(--hydro-text) !important;
-        font-weight: 700 !important;
-        letter-spacing: .2px;
-      }
-      .nrdb-subtitle, .v-card-subtitle, .md-subhead, .caption, .helper-text {
-        color: var(--hydro-sub) !important;
-      }
-
-      /* Botones / toggles / sliders con color de acento */
-      .md-button, .v-btn, .v-switch--inset .v-input--selection-controls__ripple,
-      .v-slider .v-slider-track__fill, .v-slider .v-slider-thumb,
-      .btn, .button, .nrdb-button {
-        background: var(--hydro-accent) !important;
-        color: #fff !important;
-        border-radius: 12px !important;
-      }
-      .v-switch .v-input--selection-controls__ripple { background: var(--hydro-accent) !important; }
-      .v-switch .v-selection-control__input:checked + .v-selection-control__wrapper .v-switch__track {
-        background: var(--hydro-accent) !important;
-      }
-
-      /* Inputs */
-      input, select, textarea, .v-text-field, .nrdb-input, .md-input {
-        background: var(--hydro-card) !important;
-        color: var(--hydro-text) !important;
-        border-radius: 12px !important;
-        border: 1px solid var(--hydro-border) !important;
-      }
-
-      /* Tablas */
-      table, .v-table, .md-table-content {
-        background: var(--hydro-card) !important;
-        color: var(--hydro-text) !important;
-        border-radius: 12px !important;
-      }
-      th, td { border-color: var(--hydro-border) !important; }
-
-      /* Espaciado */
-      .nrdb-card, .v-card, .v-sheet, .nr-dashboard-template, .card-panel {
-        margin: 8px !important;
-        padding: 12px !important;
-      }
-
-      /* Quita bordes y headers sobrantes */
-      .nrdb-header, .dashboard-header, .v-app-bar, md-toolbar, #nr-dashboard-toolbar {
-        display: none !important;
-      }
-    """;
+  Future<void> _initSpeech() async {
+    _speechAvailable = await _speech.initialize(
+      onStatus: (_) {},
+      onError: (_) {},
+    );
+    if (mounted) setState(() {});
   }
 
-  /// Inyecta el CSS generado en la página
-  Future<void> _applyTheme(WebViewController c) async {
-    final isDark =
-        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-        Brightness.dark;
+  /// Inicia escucha por voz (es-MX)
+  Future<void> _startListening() async {
+    if (!_speechAvailable) return;
 
-    final css = _cssFor(
-      dark: isDark,
-    ).replaceAll('\n', ' ').replaceAll("'", r"\'");
-
-    final js =
-        """
-      (function(){
-        try {
-          var old = document.getElementById('hydro-style');
-          if (old) old.remove();
-          var style = document.createElement('style');
-          style.id = 'hydro-style';
-          style.type = 'text/css';
-          style.appendChild(document.createTextNode('$css'));
-          document.head.appendChild(style);
-        } catch(e) {}
-      })();
-    """;
-    await c.runJavaScript(js);
+    await _speech.listen(
+      localeId: 'es_MX',
+      onResult: (result) {
+        final text = result.recognizedWords.toLowerCase();
+        _handleVoiceCommand(text);
+      },
+    );
+    setState(() => _isListening = true);
   }
+
+  /// Detiene escucha
+  Future<void> _stopListening() async {
+    await _speech.stop();
+    setState(() => _isListening = false);
+  }
+
+  /// Interpreta lo que dijo el usuario y manda comandos MQTT
+  void _handleVoiceCommand(String text) {
+    // ---- Ventiladores ----
+    if (text.contains('ventilador') || text.contains('ventiladores')) {
+      final encender =
+          text.contains('enciende') ||
+          text.contains('prende') ||
+          text.contains('prénd');
+      final apagar = text.contains('apaga') || text.contains('apagar');
+
+      if (encender || apagar) {
+        final turnOn = encender;
+
+        if (text.contains('uno') || text.contains('1')) {
+          _setVentilador(1, turnOn);
+        } else if (text.contains('dos') || text.contains('2')) {
+          _setVentilador(2, turnOn);
+        } else {
+          // si no dijo cuál, aplicamos a ambos
+          _setVentilador(1, turnOn);
+          _setVentilador(2, turnOn);
+        }
+      }
+    }
+
+    // ---- Tira LED / luces ----
+    if (text.contains('tira led') ||
+        (text.contains('tira') && text.contains('led')) ||
+        text.contains('luces') ||
+        text.contains('luz')) {
+      final encender =
+          text.contains('enciende') ||
+          text.contains('prende') ||
+          text.contains('prénd');
+      final apagar = text.contains('apaga') || text.contains('apagar');
+
+      if (encender || apagar) {
+        final turnOn = encender;
+        _setTiraLed(turnOn);
+      }
+    }
+  }
+
+  // ================== COMANDOS MQTT ==================
+
+  void _setVentilador(int index, bool on) {
+    setState(() {
+      if (index == 1) {
+        _vent1 = on;
+      } else if (index == 2) {
+        _vent2 = on;
+      }
+    });
+    _mqtt.setVentilador(index, on);
+  }
+
+  void _setTiraLed(bool on) {
+    setState(() => _tiraLed = on);
+    _mqtt.setLuz(on);
+  }
+
+  // ================== UI FLUTTER ==================
 
   @override
   Widget build(BuildContext context) {
@@ -201,53 +141,166 @@ class _DashboardPageState extends State<DashboardPage> {
           'Dashboard',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: isDark ? CupertinoColors.white : CupertinoColors.black,
+            fontSize: 20,
+            color: isDark
+                ? const Color.fromARGB(255, 0, 0, 0)
+                : CupertinoColors.black,
           ),
         ),
         backgroundColor: CupertinoColors.systemGroupedBackground,
         border: null,
       ),
       child: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // === WebView superior: gráficas ===
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 320,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
-                  ),
-                  child: WebViewWidget(controller: _chartsController),
-                ),
-              ),
-            ),
-
-            // === WebView inferior: switches ===
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 280,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(16)),
-                  child: WebViewWidget(controller: _switchesController),
-                ),
-              ),
-            ),
-
-            // === Tarjeta placeholder (opcional) ===
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: _Card(
-                  height: 140,
-                  child: const Center(
-                    child: Text('Gráficas históricas (próximamente)'),
+        child: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                // ===== Ambiente (DHT22) =====
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    child: const Text(
+                      'Ambiente (DHT22)',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.activeBlue,
+                      ),
+                    ),
                   ),
                 ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ValueListenableBuilder<double?>(
+                            valueListenable: _mqtt.temperatura,
+                            builder: (_, value, __) {
+                              return _GaugeCard(
+                                title: 'Temperatura (°C)',
+                                value: value,
+                                min: 0,
+                                max: 60,
+                                unit: '°C',
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ValueListenableBuilder<double?>(
+                            valueListenable: _mqtt.humedad,
+                            builder: (_, value, __) {
+                              return _GaugeCard(
+                                title: 'Humedad (%)',
+                                value: value,
+                                min: 0,
+                                max: 100,
+                                unit: '%',
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ===== Ventiladores =====
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                    child: const Text(
+                      'Ventiladores',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.activeBlue,
+                      ),
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _SwitchCard(
+                            label: 'Ventilador 1',
+                            value: _vent1,
+                            onChanged: (v) => _setVentilador(1, v),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _SwitchCard(
+                            label: 'Ventilador 2',
+                            value: _vent2,
+                            onChanged: (v) => _setVentilador(2, v),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ===== Luz LED =====
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                    child: const Text(
+                      'Luz LED',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.activeBlue,
+                      ),
+                    ),
+                  ),
+                ),
+
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: _SwitchCard(
+                      label: 'Tira LED',
+                      value: _tiraLed,
+                      onChanged: _setTiraLed,
+                    ),
+                  ),
+                ),
+
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              ],
+            ),
+
+            // Botón flotante de voz (glass, transparentoso)
+            Positioned(
+              right: 20,
+              bottom: 28,
+              child: _VoiceButton(
+                isListening: _isListening,
+                onTap: () {
+                  if (_isListening) {
+                    _stopListening();
+                  } else {
+                    _startListening();
+                  }
+                },
               ),
             ),
           ],
@@ -259,20 +312,195 @@ class _DashboardPageState extends State<DashboardPage> {
 
 /// Tarjeta con esquinas iOS
 class _Card extends StatelessWidget {
-  final double? width, height;
+  final double? height;
   final Widget child;
-  const _Card({this.width, this.height, required this.child, super.key});
+
+  const _Card({this.height, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: width,
       height: height,
       decoration: BoxDecoration(
         color: CupertinoColors.secondarySystemGroupedBackground,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: child,
+    );
+  }
+}
+
+/// Gauge semicircular nativo (sin Material)
+class _GaugeCard extends StatelessWidget {
+  final String title;
+  final double min;
+  final double max;
+  final double? value;
+  final String unit;
+
+  const _GaugeCard({
+    required this.title,
+    required this.min,
+    required this.max,
+    required this.value,
+    required this.unit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value ?? min;
+    final pct = ((v - min) / (max - min)).clamp(0.0, 1.0);
+
+    return _Card(
+      height: 190,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: Center(
+                child: CustomPaint(
+                  size: const Size(140, 80),
+                  painter: _GaugePainter(
+                    percentage: pct,
+                    color: CupertinoColors.activeGreen,
+                  ),
+                ),
+              ),
+            ),
+            Center(
+              child: Text(
+                value == null
+                    ? '-- $unit'
+                    : '${value!.toStringAsFixed(1)} $unit',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GaugePainter extends CustomPainter {
+  final double percentage;
+  final Color color;
+
+  _GaugePainter({required this.percentage, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height * 2);
+
+    final bgPaint = Paint()
+      ..color = CupertinoColors.systemGrey4
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10;
+
+    final fgPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round;
+
+    // Fondo
+    canvas.drawArc(rect, 3.14, 3.14, false, bgPaint);
+    // Progreso
+    canvas.drawArc(rect, 3.14, 3.14 * percentage, false, fgPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+/// Tarjeta para un switch tipo iOS
+class _SwitchCard extends StatelessWidget {
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SwitchCard({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      height: 80,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, style: const TextStyle(fontSize: 17))),
+            CupertinoSwitch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón flotante circular para el micrófono (glass, transparentoso)
+class _VoiceButton extends StatelessWidget {
+  final bool isListening;
+  final VoidCallback onTap;
+
+  const _VoiceButton({required this.isListening, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = isListening
+        ? CupertinoColors.systemRed
+        : CupertinoColors.activeGreen;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withOpacity(0.30),
+                  CupertinoColors.systemGrey6.withOpacity(0.08),
+                ],
+              ),
+              border: Border.all(color: accent.withOpacity(0.6), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withOpacity(0.45),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(
+              isListening ? CupertinoIcons.mic_fill : CupertinoIcons.mic,
+              color: accent,
+              size: 32,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
